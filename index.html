@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <style>
+    html, body, #container {
+        width: 100%;
+        height: 100%;
+        margin:0;
+    }
+    #controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .quarter-btn {
+        margin: 5px;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        color: white;
+        font-weight: bold;
+    }
+    #q1-btn { background-color: #1791fc; }
+    #q2-btn { background-color: #e6870a; }
+    #q3-btn { background-color: #74e60a; }
+    #q4-btn { background-color: #9932CC; }
+    #all-btn { background-color: #333; }
+    </style>
+    <title>季度商圈展示</title>
+    <script>
+        window._AMapSecurityConfig = {
+            securityJsCode: "8c9a26e733b197e9a8b86ea7baa3d592",
+        };
+    </script>
+    <script language="javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=05274d5027e6b22978b2ade4630f3596&plugin=AMap.DistrictSearch,AMap.Scale,AMap.ToolBar,AMap.GeometryUtil,AMap.MouseTool,AMap.Geocoder,AMap.Driving,AMap.Text"></script>
+    
+    <!-- 引入数据文件 -->
+    <script type="text/javascript" src="data.js"></script>
+<!--    <script type="text/javascript" src="104city_data.js"></script>-->
+
+</head>
+<body>
+<div id="container"></div>
+<div id="controls">
+    <button id="q1-btn" class="quarter-btn">第一季度</button>
+    <button id="q2-btn" class="quarter-btn">第二季度</button>
+    <button id="q3-btn" class="quarter-btn">第三季度</button>
+    <button id="q4-btn" class="quarter-btn">第四季度</button>
+    <button id="all-btn" class="quarter-btn">显示全部</button>
+</div>
+<script type="text/javascript">
+    // 加载数据
+    fetch('data.js')
+        .then(response => response.text())
+        .then(jsContent => {
+            // 执行JavaScript代码
+            eval(jsContent);
+            // 初始化地图（确保数据加载后再初始化）
+            initMap();
+        })
+        .catch(error => console.error('Error loading data:', error));
+    
+    // 将原来window.onload中的代码移到这个函数中
+    function initMap() {
+        // 原来window.onload中的所有代码
+        console.log("Initial data check:");
+        console.log("Block info:", block_info);
+        console.log("Q1 data:", paths_list);
+        console.log("Q2 data:", paths_list2);
+        console.log("Q3 data:", paths_list3);
+        console.log("Q4 data:", paths_list4);
+
+        var map = new AMap.Map("container", {
+            center: [116.400274, 39.905812],
+            zoom: 14,
+        });
+
+        window.currentMap = map;
+
+        // 创建信息窗体
+        map.infoWindow = new AMap.InfoWindow({
+            offset: new AMap.Pixel(0, -30),
+            closeWhenClickMap: true
+        });
+
+        // 创建多边形的函数
+        function createPolygonWithInfo(blockId, path, style) {
+            var info = block_info[blockId];
+            if (!info) {
+                console.error('Missing info for block:', blockId);
+                return null;
+            }
+
+            var polygon = new AMap.Polygon({
+                path: path,
+                ...style,
+                extData: {blockId: blockId}
+            });
+
+            // 添加点击事件
+            polygon.on('click', function(e) {
+                var info = block_info[e.target.getExtData().blockId];
+                var blockId = e.target.getExtData().blockId;  // 获取block id
+                var content = `
+                    <div style="padding: 10px;">
+                        <h4>商圈信息</h4>
+                        <p>商圈ID: ${blockId}</p>
+                        <p>预测GMV: ${info.gmv_pred}</p>
+                        <p>预测容量: ${info.capacity_pred}</p>
+                        <p>剩余容量: ${info.left_capacity}</p>
+                        <p>季度: ${info.quarter}</p>
+                    </div>
+                `;
+                
+                map.infoWindow.setContent(content);
+                var center = e.target.getBounds().getCenter();
+                map.infoWindow.open(map, center);
+            });
+
+            return polygon;
+        }
+
+        // 创建各季度多边形
+        var styles = {
+            Q1: {
+                strokeColor: "#1791fc",
+                strokeWeight: 6,
+                strokeOpacity: 0.5,
+                fillOpacity: 0.5,
+                fillColor: '#1791fc',
+                zIndex: 50
+            },
+            Q2: {
+                strokeColor: "#e6870a",
+                strokeWeight: 6,
+                strokeOpacity: 0.5,
+                fillOpacity: 0.5,
+                fillColor: '#e6870a',
+                zIndex: 50
+            },
+            Q3: {
+                strokeColor: "#74e60a",
+                strokeWeight: 6,
+                strokeOpacity: 0.5,
+                fillOpacity: 0.5,
+                fillColor: '#74e60a',
+                zIndex: 50
+            },
+            Q4: {
+                strokeColor: "#9932CC",
+                strokeWeight: 6,
+                strokeOpacity: 0.5,
+                fillOpacity: 0.5,
+                fillColor: '#9932CC',
+                zIndex: 50
+            }
+        };
+
+        // 创建并保存多边形到window对象
+        window.currentPolygons = {};
+
+        // 检查并创建多边形
+        if (paths_list && paths_list.blocks && paths_list.paths) {
+            console.log("Creating Q1 polygons...");
+            window.currentPolygons.Q1 = paths_list.blocks.map((blockId, index) => {
+                console.log(`Creating polygon for block ${blockId}...`);
+                return createPolygonWithInfo(blockId, paths_list.paths[index], styles.Q1);
+            }).filter(p => p);
+            console.log(`Created ${window.currentPolygons.Q1.length} Q1 polygons`);
+        }
+        if (paths_list2 && paths_list2.blocks && paths_list2.paths) {
+            window.currentPolygons.Q2 = paths_list2.blocks.map((blockId, index) => 
+                createPolygonWithInfo(blockId, paths_list2.paths[index], styles.Q2)).filter(p => p);
+        }
+        if (paths_list3 && paths_list3.blocks && paths_list3.paths) {
+            window.currentPolygons.Q3 = paths_list3.blocks.map((blockId, index) => 
+                createPolygonWithInfo(blockId, paths_list3.paths[index], styles.Q3)).filter(p => p);
+        }
+        if (paths_list4 && paths_list4.blocks && paths_list4.paths) {
+            window.currentPolygons.Q4 = paths_list4.blocks.map((blockId, index) => 
+                createPolygonWithInfo(blockId, paths_list4.paths[index], styles.Q4)).filter(p => p);
+        }
+
+        // 添加按钮事件监听
+        document.getElementById('q1-btn').onclick = () => {
+            console.log("Showing Q1...");
+            showQuarter('Q1');
+        };
+        document.getElementById('q2-btn').onclick = () => showQuarter('Q2');
+        document.getElementById('q3-btn').onclick = () => showQuarter('Q3');
+        document.getElementById('q4-btn').onclick = () => showQuarter('Q4');
+        document.getElementById('all-btn').onclick = () => showQuarter('all');
+
+        // 初始显示所有季度
+        console.log("Showing all quarters...");
+        showQuarter('all');
+    }
+
+    // 将showQuarter定义在全局作用域
+    function showQuarter(quarter) {
+        if (window.currentMap && window.currentPolygons) {
+            window.currentMap.infoWindow.close();
+            
+            Object.values(window.currentPolygons).flat().forEach(polygon => 
+                window.currentMap.remove(polygon));
+            
+            if (quarter === 'all') {
+                Object.values(window.currentPolygons).flat().forEach(polygon => 
+                    window.currentMap.add(polygon));
+                window.currentMap.setFitView(Object.values(window.currentPolygons).flat());
+            } else {
+                window.currentPolygons[quarter].forEach(polygon => 
+                    window.currentMap.add(polygon));
+                window.currentMap.setFitView(window.currentPolygons[quarter]);
+            }
+        }
+    }
+</script>
+</body>
+</html>
