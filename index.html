@@ -35,7 +35,7 @@
     #q4-btn { background-color: #9932CC; }
     #all-btn { background-color: #333; }
     </style>
-    <title>季度商圈展示</title>
+    <title>新区-季度商圈展示</title>
     <script>
         window._AMapSecurityConfig = {
             securityJsCode: "8c9a26e733b197e9a8b86ea7baa3d592",
@@ -44,7 +44,7 @@
     <script language="javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=05274d5027e6b22978b2ade4630f3596&plugin=AMap.DistrictSearch,AMap.Scale,AMap.ToolBar,AMap.GeometryUtil,AMap.MouseTool,AMap.Geocoder,AMap.Driving,AMap.Text"></script>
     
     <!-- 引入数据文件 -->
-    <script type="text/javascript" src="data.js"></script>
+    <script type="text/javascript" src="xinqu_data.js"></script>
 <!--    <script type="text/javascript" src="104city_data.js"></script>-->
 
 </head>
@@ -59,7 +59,7 @@
 </div>
 <script type="text/javascript">
     // 加载数据
-    fetch('data.js')
+    fetch('xinqu_data.js')
         .then(response => response.text())
         .then(jsContent => {
             // 执行JavaScript代码
